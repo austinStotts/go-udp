@@ -8,6 +8,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 type User struct {
@@ -36,6 +41,46 @@ func main() {
 	s.ListenAndServe()
 }
 
+func getUser(username string) User {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-1")},
+	)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	svc := dynamodb.New(sess)
+
+	tableName := "users"
+
+	result, err := svc.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"Username": {
+				S: aws.String(username),
+			},
+		},
+	})
+
+	if err != nil {
+		log.Fatalf("Got error calling GetItem: %s", err)
+	}
+
+	user := User{}
+	if result.Item == nil {
+		fmt.Println("result is empty")
+		return user
+	} else {
+		err = dynamodbattribute.UnmarshalMap(result.Item, &user)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to unmarshal Record, %v", err))
+		}
+		fmt.Println("Found user:")
+		fmt.Println(user)
+		return user
+	}
+}
+
 func signupHandler(res http.ResponseWriter, req *http.Request) {
 	fmt.Println("REQUST ON /SIGNUP")
 
@@ -48,14 +93,16 @@ func signupHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// parse data into struct
-	newuser := User{}
-	json.Unmarshal([]byte(body), &newuser)
-	fmt.Println(newuser.Password)
+	requestUser := User{}
+	json.Unmarshal([]byte(body), &requestUser)
 
 	// hash password
-	hashedPassword := hash(newuser.Password)
+	hashedPassword := hash(requestUser.Password)
+	fmt.Println(hashedPassword)
 
 	// check if username already exists
+	foundUser := getUser(requestUser.Username)
+	fmt.Println(foundUser)
 
 	data := []byte("signup")
 	res.WriteHeader(200)
