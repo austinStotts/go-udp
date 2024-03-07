@@ -2,50 +2,46 @@ package main
 
 import (
     "fmt"
-    "log"
-    "net/http"
-
-    "github.com/gorilla/websocket"
+    "net"
 )
 
-var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
-}
-
 func main() {
-    // Handle WebSocket connections
-    http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-        // Upgrade the HTTP connection to a WebSocket connection
-        conn, err := upgrader.Upgrade(w, r, nil)
+    // Listen for UDP packets on port 8080
+    udpAddr, err := net.ResolveUDPAddr("udp", ":8080")
+    if err != nil {
+        fmt.Println("Error resolving UDP address:", err)
+        return
+    }
+
+    // Create UDP connection
+    udpConn, err := net.ListenUDP("udp", udpAddr)
+    if err != nil {
+        fmt.Println("Error listening:", err)
+        return
+    }
+    defer udpConn.Close()
+
+    fmt.Println("UDP server is listening on port 8080...")
+
+    // Buffer for receiving data
+    buffer := make([]byte, 1024)
+
+    for {
+        // Read data from UDP connection
+        n, addr, err := udpConn.ReadFromUDP(buffer)
         if err != nil {
-            log.Println("Upgrade error:", err)
-            return
+            fmt.Println("Error reading from UDP:", err)
+            continue
         }
-        defer conn.Close()
 
-        // Continuously read messages from the WebSocket connection
-        for {
-            // Read message from the client
-            messageType, p, err := conn.ReadMessage()
-            if err != nil {
-                log.Println("Read error:", err)
-                return
-            }
+        // Print received data
+        fmt.Printf("Received %d bytes from %s: %s\n", n, addr, string(buffer[:n]))
 
-            // Print received message
-            fmt.Printf("Received message: %s\n", p)
-
-            // Echo the message back to the client
-            err = conn.WriteMessage(messageType, p)
-            if err != nil {
-                log.Println("Write error:", err)
-                return
-            }
+        // Echo received data back to the client
+        _, err = udpConn.WriteToUDP(buffer[:n], addr)
+        if err != nil {
+            fmt.Println("Error writing to UDP:", err)
+            continue
         }
-    })
-
-    // Start the HTTP server on port 8080
-    fmt.Println("Server is listening on port 8080...")
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    }
 }
