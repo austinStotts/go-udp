@@ -8,8 +8,11 @@ import (
 )
 
 type User struct {
-	Username string
-	Password string
+	Username     string
+	Password     string
+	SessionToken string
+	TokenCreated string
+	Created      string
 }
 
 func main() {
@@ -19,13 +22,24 @@ func main() {
 		Password: "abc123",
 	}
 
-	j, err := json.Marshal(steve)
+	_, err := json.Marshal(steve)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	req, err := http.NewRequest("POST", "http://127.0.0.1:8000/account/signup", bytes.NewBuffer(j))
+	tokenUser := &User{
+		Username:     "steve",
+		SessionToken: "1e5fa495b52c62fd7bc0456629821cf5c87dfbc036ad7847b84f0eb824266727",
+	}
+
+	t, err := json.Marshal(tokenUser)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", "http://127.0.0.1:8000/account/tokenlogin", bytes.NewBuffer(t))
 	if err != nil {
 		fmt.Println(err)
 		return
