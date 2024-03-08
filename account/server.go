@@ -50,7 +50,7 @@ func main() {
 	// define what routes do what
 	mux.HandleFunc("/account/signup", signupHandler)
 	mux.HandleFunc("/account/login", loginHandler)
-	mux.HandleFunc("/account/tokenlogin", tokenLoginHandler)
+	mux.HandleFunc("/account/validate-token", validateTokenHandler)
 
 	s := &http.Server{
 		Addr:    ":8000",
@@ -344,8 +344,8 @@ func loginHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-func tokenLoginHandler(res http.ResponseWriter, req *http.Request) {
-	fmt.Println("/tokenlogin request")
+func validateTokenHandler(res http.ResponseWriter, req *http.Request) {
+	fmt.Println("/validateToken request")
 
 	// get data from request body
 	body, err := ioutil.ReadAll(req.Body)
